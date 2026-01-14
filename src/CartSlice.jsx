@@ -1,68 +1,54 @@
-import { createSlice } from '@reduxjs/toolkit';
+const initialState = {
+  cart: []
+};
 
-export const CartSlice = createSlice({
-  name: 'cart',
-  initialState: {
-    items: [], // Initialize items as an empty array
-  },
-  reducers: {
-    // payload can be either an item object ({ id, name, price, ... , quantity? })
-    // or an object containing { id, quantity } depending on how callers dispatch.
-    addItem: (state, action) => {
-      const payload = action.payload;
-      const itemId = payload && (payload.id ?? payload);
-      if (!itemId) return;
+const cartReducer = (state = initialState, action) => {
+  switch (action.type) {
 
-      const existing = state.items.find((it) => it.id === itemId);
-      const addQty = Number(payload.quantity ?? 1);
+    case "ADD_ITEM":
+      const existingItem = state.cart.find(
+        item => item.id === action.payload.id
+      );
 
-      if (existing) {
-        existing.quantity = (Number(existing.quantity ?? 1) + addQty);
+      if (existingItem) {
+        return {
+          ...state,
+          cart: state.cart.map(item =>
+            item.id === action.payload.id
+              ? { ...item, quantity: item.quantity + 1 }
+              : item
+          )
+        };
       } else {
-        // If payload is just an id, create a minimal item shape.
-        if (typeof payload === 'object' && payload.id) {
-          state.items.push({
-            ...payload,
-            quantity: addQty,
-          });
-        } else {
-          state.items.push({
-            id: itemId,
-            quantity: addQty,
-          });
-        }
+        return {
+          ...state,
+          cart: [
+            ...state.cart,
+            { ...action.payload, quantity: 1 }
+          ]
+        };
       }
-    },
 
-    // payload can be id or { id }
-    removeItem: (state, action) => {
-      const payload = action.payload;
-      const id = payload && (payload.id ?? payload);
-      if (!id) return;
-      state.items = state.items.filter((it) => it.id !== id);
-    },
+    case "REMOVE_ITEM":
+      return {
+        ...state,
+        cart: state.cart.filter(item => item.id !== action.payload)
+      };
 
-    // payload should be { id, quantity }
-    // if quantity <= 0 the item is removed
-    updateQuantity: (state, action) => {
-      const payload = action.payload || {};
-      const id = payload.id;
-      if (!id) return;
+    case "UPDATE_QUANTITY":
+      return {
+        ...state,
+        cart: state.cart.map(item =>
+          item.id === action.payload.id
+            ? { ...item, quantity: action.payload.quantity }
+            : item
+        )
+      };
 
-      const quantity = Number(payload.quantity);
-      const existing = state.items.find((it) => it.id === id);
-      if (!existing) return;
+    default:
+      return state;
+  }
+};
 
-      if (Number.isNaN(quantity) || quantity <= 0) {
-        // remove item when quantity is not positive
-        state.items = state.items.filter((it) => it.id !== id);
-      } else {
-        existing.quantity = quantity;
-      }
-    },
-  },
-});
+export default cartReducer;
 
-export const { addItem, removeItem, updateQuantity } = CartSlice.actions;
-
-export default CartSlice.reducer;
