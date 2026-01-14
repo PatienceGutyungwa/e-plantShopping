@@ -1,68 +1,110 @@
 import React from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { removeItem, updateQuantity } from './CartSlice';
-import './CartItem.css';
+import { useDispatch, useSelector } from 'react-redux';
+import { addItem, removeItem, updateQuantity } from './CartSlice';
 
-const CartItem = ({ onContinueShopping }) => {
-  const cart = useSelector(state => state.cart.items);
+const CartItem = () => {
   const dispatch = useDispatch();
+  const items = useSelector((state) => state.cart?.items || []);
 
-  // Calculate total amount for all products in the cart
+  // Sum total = sum(item.price * item.quantity)
   const calculateTotalAmount = () => {
- 
+    return items.reduce((sum, it) => {
+      const price = Number(it.price ?? 0);
+      const qty = Number(it.quantity ?? 1);
+      if (Number.isNaN(price) || Number.isNaN(qty)) return sum;
+      return sum + price * qty;
+    }, 0);
   };
-
-  const handleContinueShopping = (e) => {
-   
-  };
-
-
 
   const handleIncrement = (item) => {
+    // If item already has quantity, increment, otherwise add with quantity 1
+    const newQty = Number(item.quantity ?? 0) + 1;
+    // Prefer updateQuantity for existing items
+    if (item.id) {
+      dispatch(updateQuantity({ id: item.id, quantity: newQty }));
+    } else {
+      // Fallback: add item object with quantity
+      dispatch(addItem({ ...item, quantity: 1 }));
+    }
   };
 
   const handleDecrement = (item) => {
-   
+    const currentQty = Number(item.quantity ?? 1);
+    const newQty = currentQty - 1;
+    if (!item.id) return;
+    if (newQty <= 0) {
+      // remove when quantity reaches 0
+      dispatch(removeItem(item.id));
+    } else {
+      dispatch(updateQuantity({ id: item.id, quantity: newQty }));
+    }
   };
 
   const handleRemove = (item) => {
+    if (!item?.id) return;
+    dispatch(removeItem(item.id));
   };
 
-  // Calculate total cost based on quantity for an item
-  const calculateTotalCost = (item) => {
-  };
+  if (items.length === 0) {
+    return (
+      <div className="cart-empty">
+        <h3>Your cart is empty</h3>
+      </div>
+    );
+  }
 
   return (
     <div className="cart-container">
-      <h2 style={{ color: 'black' }}>Total Cart Amount: ${calculateTotalAmount()}</h2>
-      <div>
-        {cart.map(item => (
-          <div className="cart-item" key={item.name}>
-            <img className="cart-item-image" src={item.image} alt={item.name} />
-            <div className="cart-item-details">
-              <div className="cart-item-name">{item.name}</div>
-              <div className="cart-item-cost">{item.cost}</div>
-              <div className="cart-item-quantity">
-                <button className="cart-item-button cart-item-button-dec" onClick={() => handleDecrement(item)}>-</button>
-                <span className="cart-item-quantity-value">{item.quantity}</span>
-                <button className="cart-item-button cart-item-button-inc" onClick={() => handleIncrement(item)}>+</button>
-              </div>
-              <div className="cart-item-total">Total: ${calculateTotalCost(item)}</div>
-              <button className="cart-item-delete" onClick={() => handleRemove(item)}>Delete</button>
-            </div>
-          </div>
-        ))}
-      </div>
-      <div style={{ marginTop: '20px', color: 'black' }} className='total_cart_amount'></div>
-      <div className="continue_shopping_btn">
-        <button className="get-started-button" onClick={(e) => handleContinueShopping(e)}>Continue Shopping</button>
-        <br />
-        <button className="get-started-button1">Checkout</button>
+      <h2>Your Cart</h2>
+      <table className="cart-table">
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Price</th>
+            <th>Qty</th>
+            <th>Subtotal</th>
+            <th />
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((it) => {
+            const price = Number(it.price ?? 0);
+            const qty = Number(it.quantity ?? 1);
+            return (
+              <tr key={it.id ?? `${it.name}-${Math.random()}`}>
+                <td className="product-cell">
+                  {it.thumbnail && (
+                    <img
+                      src={it.thumbnail}
+                      alt={it.name}
+                      style={{ width: 60, height: 60, objectFit: 'cover', marginRight: 8 }}
+                    />
+                  )}
+                  <span>{it.name ?? 'Unnamed product'}</span>
+                </td>
+                <td>${price.toFixed(2)}</td>
+                <td>
+                  <div className="qty-controls">
+                    <button onClick={() => handleDecrement(it)} aria-label="decrement">-</button>
+                    <span style={{ margin: '0 8px' }}>{qty}</span>
+                    <button onClick={() => handleIncrement(it)} aria-label="increment">+</button>
+                  </div>
+                </td>
+                <td>${(price * qty).toFixed(2)}</td>
+                <td>
+                  <button onClick={() => handleRemove(it)} aria-label="remove">Delete</button>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+
+      <div className="cart-summary" style={{ marginTop: 16 }}>
+        <strong>Total: </strong>${calculateTotalAmount().toFixed(2)}
       </div>
     </div>
   );
 };
 
 export default CartItem;
-
-
